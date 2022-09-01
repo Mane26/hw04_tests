@@ -9,15 +9,20 @@ from ..models import Group, Post
 User = get_user_model()
 
 
-class StaticURLTests(TestCase):
+class UserURLTests(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        """Создадим запись в БД для проверки доступности
+        адреса user/test-slug/."""
         cls.author = User.objects.create_user(username='Автор постов')
         cls.group = Group.objects.create(
             title='Название',
             slug='address',
             description='Описание',
+        )
+        cls.user = User.objects.create_user(
+            username='Пользователь без постов'
         )
         cls.post = Post.objects.create(
             author=cls.author,
@@ -25,12 +30,12 @@ class StaticURLTests(TestCase):
         )
 
     def setUp(self):
+        # Создаем неавторизованный клиент
         self.guest_client = Client()
+        # Создаем второй клиент
         self.auth_author = Client()
         self.auth_author.force_login(self.author)
-        self.user = User.objects.create_user(
-            username='Пользователь без постов'
-        )
+        # Авторизуем пользователя
         self.authorized_client = Client()
         self.authorized_client.force_login(self.user)
 
@@ -58,6 +63,7 @@ class StaticURLTests(TestCase):
             self.assertEqual(response.status_code, HTTPStatus.OK)
 
     def test_unezisting_urls(self):
+        """Страница / доступна любому пользователю."""
         response = self.guest_client.get('/unexisting_page/')
         self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
 
@@ -111,17 +117,21 @@ class StaticURLTests(TestCase):
                 self.assertTemplateUsed(response, template)
 
     def test_urls_for_authorized_user(self):
+        """Страница /create/ доступна авторизованному пользователю."""
         urls_list = [
             '/create/',
         ]
+        response = self.authorized_client.get('/create/')
         for urls in urls_list:
             response = self.authorized_client.get(urls)
             self.assertEqual(response.status_code, HTTPStatus.OK)
 
     def test_template_for_urls_authorized_user(self):
+        """Страница /create/ доступна авторизованному пользователю."""
         urls_set = {
             '/create/': 'posts/create_post.html'
         }
+        response = self.authorized_client.get('/create/')
         for urls, template in urls_set.items():
             with self.subTest(urls=urls):
                 response = self.authorized_client.get(urls)

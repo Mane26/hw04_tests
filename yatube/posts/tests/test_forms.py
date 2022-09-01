@@ -13,6 +13,7 @@ class PostFormTest(TestCase):
     def setUpClass(cls):
         super().setUpClass()
         super().setUpClass()
+        """ Создаем запись в базе данных для проверки сушествующего slug."""
         cls.author = User.objects.create_user(
             username='Автор постов'
         )
@@ -25,6 +26,7 @@ class PostFormTest(TestCase):
             author=cls.author,
             text='текст',
         )
+        """ Создаем форму, если нужна проверка атрибутов."""
         cls.form = PostForm()
 
     def setUp(self):
@@ -35,6 +37,7 @@ class PostFormTest(TestCase):
         self.authorized_client.force_login(self.user)
 
     def test_post_create(self):
+        """Подсчитаем количество записей в Post."""
         reverse_address_profile = reverse(
             'posts:profile',
             kwargs={'username': self.user.username}
@@ -50,11 +53,14 @@ class PostFormTest(TestCase):
             data=form_data,
             follow=True
         )
+        # Убедимся, что запись в базе данных не создалась
+        # сравним количество записей в Task до и после отправки формы
         self.assertRedirects(response, reverse_address_profile)
         self.assertEqual(
             Post.objects.count(),
             post_count + 1
         )
+        # Проверяем, что создалась запись с заданнымb параметрами
         self.assertTrue(
             Post.objects.filter(
                 text='текст',
@@ -63,6 +69,13 @@ class PostFormTest(TestCase):
         )
 
     def test_post_edit(self):
+        """ Проверяем страницу редактирования записи
+        и авторизованных пользователей."""
+        post_id = self.post.text
+        form_data = {
+            'text': 'стих',
+            'group': self.group.id
+        }
         reverse_address_profile = reverse(
             'posts:post_detail',
             kwargs={'post_id': self.post.pk}
@@ -71,11 +84,6 @@ class PostFormTest(TestCase):
             'posts:post_edit',
             kwargs={'post_id': self.post.pk}
         )
-        post_id = Post.objects.get(id=self.post.pk).text
-        form_data = {
-            'text': 'текст',
-            'group': self.group.id
-        }
         response = self.authorized_client.post(
             reverse_address_edit,
             data=form_data,

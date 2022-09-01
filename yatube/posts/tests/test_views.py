@@ -16,6 +16,7 @@ class TestTemplatePages(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        """Создадим запись в БД."""
         cls.author = User.objects.create_user(
             username='Автор постов'
         )
@@ -30,6 +31,7 @@ class TestTemplatePages(TestCase):
         )
 
     def setUp(self):
+        # Создаем авторизованный клиент
         self.guest_client = Client()
         self.auth_author = Client()
         self.auth_author.force_login(self.author)
@@ -40,6 +42,7 @@ class TestTemplatePages(TestCase):
         self.authorized_client.force_login(self.user)
 
     def test_pages_templates(self):
+        """URL-адреса используют шаблон posts/index.html."""
         reverse_index = reverse('posts:index')
         reverse_group = reverse(
             'posts:group_list',
@@ -64,6 +67,7 @@ class TestTemplatePages(TestCase):
                 self.assertTemplateUsed(response, templates)
 
     def test_template_for_urls_author(self):
+        """URL-адреса используют шаблон posts/create_post.html."""
         reverse_posts_edit = reverse(
             'posts:post_edit',
             kwargs={'post_id': self.post.pk}
@@ -77,6 +81,7 @@ class TestTemplatePages(TestCase):
                 self.assertTemplateUsed(response, template)
 
     def test_template_for_urls_authorized_user(self):
+        """URL-адреса используют шаблон posts/create_post.html."""
         reverse_posts_create = reverse('posts:post_create')
         urls_set = {
             reverse_posts_create: 'posts/create_post.html'
@@ -90,6 +95,7 @@ class TestTemplatePages(TestCase):
 class TestContextPages(TestCase):
     @classmethod
     def setUpClass(cls):
+        # Создадим запись в БД
         super().setUpClass()
         cls.author = User.objects.create_user(
             username='Автор постов'
@@ -106,6 +112,7 @@ class TestContextPages(TestCase):
         )
 
     def setUp(self):
+        # Создаем авторизованный клиент
         self.guest_client = Client()
         self.auth_author = Client()
         self.auth_author.force_login(self.author)
@@ -121,6 +128,8 @@ class TestContextPages(TestCase):
         self.authorized_client_2.force_login(self.user_2)
 
     def test_index_context(self):
+        # Проверка словаря контекста главной страницы (в нём передаётся форма)
+        """Шаблон index сформирован с правильным контекстом."""
         reverse_address = reverse('posts:index')
         response = self.authorized_client.get(reverse_address)
         context_page = response.context.get('page_obj')
@@ -130,6 +139,7 @@ class TestContextPages(TestCase):
             self.assertEqual(post.group, self.post.group)
 
     def test_group_posts_context(self):
+        """Шаблон group_list сформирован с правильным контекстом."""
         reverse_address = reverse(
             'posts:group_list',
             kwargs={'slug': self.group.slug}
@@ -141,6 +151,7 @@ class TestContextPages(TestCase):
             self.assertEqual(post.group, self.post.group)
 
     def test_profile_context(self):
+        """Шаблон profile сформирован с правильным контекстом."""
         reverse_address = reverse(
             'posts:profile',
             kwargs={'username': self.author.username}
@@ -152,6 +163,7 @@ class TestContextPages(TestCase):
             self.assertEqual(post.group, self.post.group)
 
     def test_post_detail_context(self):
+        """Шаблон post_detail сформирован с правильным контекстом."""
         reverse_address = reverse(
             'posts:post_detail',
             kwargs={'post_id': self.post.pk}
@@ -168,6 +180,7 @@ class TestContextPages(TestCase):
         self.assertEqual(post_group, self.post.group)
 
     def test_post_edit_context(self):
+        """Шаблон post_edit сформирован с правильным контекстом."""
         reverse_address = reverse(
             'posts:post_edit',
             kwargs={'post_id': self.post.pk}
@@ -190,6 +203,7 @@ class TestContextPages(TestCase):
                 self.assertIsInstance(form_field, field_type)
 
     def test_create_post_context(self):
+        """Шаблон post_create сформирован с правильным контекстом."""
         reverse_address = reverse(
             'posts:post_create'
         )
@@ -255,6 +269,7 @@ class TestPaginatorPages(TestCase):
         self.auth_author.force_login(self.author)
 
     def test_paginator_for_pages(self):
+        # Здесь создаются фикстуры: клиент и 13 тестовых записей.
         pages = {
             reverse(
                 'posts:index'
@@ -270,6 +285,7 @@ class TestPaginatorPages(TestCase):
         }
         for page in pages:
             with self.subTest(page=page):
+                # Проверка: количество постов на первой и второй странице
                 response_page_number_one = self.auth_author.get(page)
                 response_page_number_two = self.auth_author.get(
                     page + '?page=2'

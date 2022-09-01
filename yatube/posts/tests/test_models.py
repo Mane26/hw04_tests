@@ -10,6 +10,8 @@ class PostModelTest(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        """Создаём тестовую запись в БД."""
+        # И сохраняем созданную запись в качестве переменной класса
         cls.user = User.objects.create_user(username='auth')
         cls.group = Group.objects.create(
             title='Тест-группа',
@@ -35,6 +37,7 @@ class PostModelTest(TestCase):
                 self.assertEqual(expected_value, str(model))
 
     def test_post_help_text(self):
+        """help_text поля title совпадает с ожидаемым."""
         post = PostModelTest.post
         field_help_test = {
             'text': 'Введите текст поста',
@@ -47,6 +50,7 @@ class PostModelTest(TestCase):
                 )
 
     def test_post_verbose_name(self):
+        """verbose_name в полях совпадает с ожидаемым."""
         post = PostModelTest.post
         field_verbose_name = {
             'text': 'Текст',
