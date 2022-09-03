@@ -29,15 +29,15 @@ class TestTemplatePages(TestCase):
             author=cls.author,
             text='текст',
         )
+        cls.user = User.objects.create_user(
+            username='Пользователь без постов'
+        )
 
     def setUp(self):
         # Создаем авторизованный клиент
         self.guest_client = Client()
         self.auth_author = Client()
         self.auth_author.force_login(self.author)
-        self.user = User.objects.create_user(
-            username='Пользователь без постов'
-        )
         self.authorized_client = Client()
         self.authorized_client.force_login(self.user)
 
@@ -110,15 +110,15 @@ class TestContextPages(TestCase):
             text='текст',
             group=cls.group,
         )
+        cls.user = User.objects.create_user(
+            username='Пользователь без постов'
+        )
 
     def setUp(self):
         # Создаем авторизованный клиент
         self.guest_client = Client()
         self.auth_author = Client()
         self.auth_author.force_login(self.author)
-        self.user = User.objects.create_user(
-            username='Пользователь без постов'
-        )
         self.authorized_client = Client()
         self.authorized_client.force_login(self.user)
         self.user_2 = User.objects.create_user(
@@ -164,20 +164,13 @@ class TestContextPages(TestCase):
 
     def test_post_detail_context(self):
         """Шаблон post_detail сформирован с правильным контекстом."""
-        reverse_address = reverse(
-            'posts:post_detail',
-            kwargs={'post_id': self.post.pk}
-        )
-        response = self.authorized_client.get(reverse_address)
-        first_object = response.context['post']
-        post_author = first_object.author
-        post_text = first_object.text
-        post_group = first_object.group
-        post_id = Post.objects.get(pk=self.post.pk).text
-        self.assertEqual(post_id, self.post.text)
-        self.assertEqual(post_author, self.post.author)
-        self.assertEqual(post_text, self.post.text)
-        self.assertEqual(post_group, self.post.group)
+        response = self.authorized_client.get(
+            reverse('posts:post_detail', kwargs={'post_id': self.post.id}))
+        post_text_0 = {response.context['post'].text: 'текст',
+                       response.context['post'].group: self.group,
+                       response.context['post'].author: self.user.username}
+        for value, expected in post_text_0.items():
+            self.assertEqual(post_text_0[value], expected)
 
     def test_post_edit_context(self):
         """Шаблон post_edit сформирован с правильным контекстом."""

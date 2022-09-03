@@ -69,25 +69,22 @@ class PostFormTest(TestCase):
         )
 
     def test_post_edit(self):
-        """ Проверяем страницу редактирования записи
-        и авторизованных пользователей."""
-        post_id = self.post.text
+        """Валидная форма редактирования записи в Post."""
+        posts_count = Post.objects.count()
         form_data = {
-            'text': 'стих',
+            'text': 'Обновленный текст',
             'group': self.group.id
         }
-        reverse_address_profile = reverse(
-            'posts:post_detail',
-            kwargs={'post_id': self.post.pk}
-        )
-        reverse_address_edit = reverse(
-            'posts:post_edit',
-            kwargs={'post_id': self.post.pk}
-        )
         response = self.authorized_client.post(
-            reverse_address_edit,
-            data=form_data,
-            follow=True
-        )
-        self.assertEqual(post_id, 'текст')
-        self.assertRedirects(response, reverse_address_profile)
+            reverse('posts:post_edit', kwargs={
+                    'post_id': self.post.id}),
+            data=form_data, follow=True)
+        # Проверяем работает ли редирект
+        self.assertRedirects(response, reverse('posts:post_detail', kwargs={
+            'post_id': self.post.id}))
+        # Проверяем, что измененный текст появился в базе
+        self.assertTrue(Post.objects.filter(
+            text='Обновленный текст',
+            group=PostFormTest.group).exists())
+        # Проверяем, что количество постов не изменилось
+        self.assertEqual(Post.objects.count(), posts_count)

@@ -4,6 +4,7 @@ from django.test import TestCase
 from ..models import Group, Post
 
 User = get_user_model()
+Number_of_characters = 15
 
 
 class PostModelTest(TestCase):
@@ -20,17 +21,18 @@ class PostModelTest(TestCase):
         )
         cls.post = Post.objects.create(
             author=cls.user,
-            text='р' * 15,
+            text='p' * 'Number_of_characters',
         )
 
-    def test_post_convert_to_str(self):
-        post = PostModelTest.post
-        post_title = post.text[:15]
+    def test_models_have_correct_object_names(self):
+        """Проверяем, что у моделей корректно работает __str__."""
         group = PostModelTest.group
         group_title = group.title
+        post = PostModelTest.post
+        post_title = post.text[:Number_of_characters]
         expected_str = {
-            post: post_title,
             group: group_title,
+            post: post_title
         }
         for model, expected_value in expected_str.items():
             with self.subTest(model=model):

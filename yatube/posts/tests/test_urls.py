@@ -40,6 +40,7 @@ class UserURLTests(TestCase):
         self.authorized_client.force_login(self.user)
 
     def test_urls_for_everyone(self):
+        """Страницы  доступны любому пользователю."""
         reverse_group = reverse(
             'posts:group_list',
             kwargs={'slug': self.group.slug}
@@ -62,12 +63,14 @@ class UserURLTests(TestCase):
             response = self.guest_client.get(urls)
             self.assertEqual(response.status_code, HTTPStatus.OK)
 
-    def test_unezisting_urls(self):
-        """Страница / доступна любому пользователю."""
+    def test_unexisting_urls(self):
+        """Проверяем не существующую страницу."""
         response = self.guest_client.get('/unexisting_page/')
         self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
 
     def test_template_urls_for_everyone(self):
+        """URL-адрес использует соответствующий шаблон."""
+        # Шаблоны по адресам
         reverse_group = reverse(
             'posts:group_list',
             kwargs={'slug': self.group.slug}
@@ -92,6 +95,7 @@ class UserURLTests(TestCase):
                 self.assertTemplateUsed(response, template)
 
     def test_urls_for_author(self):
+        """URL-адрес использует соответствующий шаблон."""
         reverse_post_for_edit = reverse(
             'posts:post_edit',
             kwargs={'post_id': self.post.pk}
@@ -104,6 +108,7 @@ class UserURLTests(TestCase):
             self.assertEqual(response.status_code, HTTPStatus.OK)
 
     def test_template_for_urls_author(self):
+        """URL-адрес использует соответствующий шаблон."""
         reverse_post_for_edit = reverse(
             'posts:post_edit',
             kwargs={'post_id': self.post.pk}
@@ -117,7 +122,7 @@ class UserURLTests(TestCase):
                 self.assertTemplateUsed(response, template)
 
     def test_urls_for_authorized_user(self):
-        """Страница /create/ доступна авторизованному пользователю."""
+        """Доступ авторизованного пользователя."""
         urls_list = [
             '/create/',
         ]
@@ -127,7 +132,8 @@ class UserURLTests(TestCase):
             self.assertEqual(response.status_code, HTTPStatus.OK)
 
     def test_template_for_urls_authorized_user(self):
-        """Страница /create/ доступна авторизованному пользователю."""
+        """URL-адрес использует соответствующий шаблон,
+        для авторизованного пользователя."""
         urls_set = {
             '/create/': 'posts/create_post.html'
         }
@@ -136,3 +142,25 @@ class UserURLTests(TestCase):
             with self.subTest(urls=urls):
                 response = self.authorized_client.get(urls)
                 self.assertTemplateUsed(response, template)
+
+    def test_urls_redirect_guest_client(self):
+        """Редирект неавторизованного пользователя"""
+        url1 = '/auth/login/?next=/create/'
+        url2 = f'/auth/login/?next=/posts/{self.post.id}/edit/'
+        pages = {'/create/': url1,
+                 f'/posts/{self.post.id}/edit/': url2}
+        for page, value in pages.items():
+            response = self.guest_client.get(page)
+            self.assertRedirects(response, value)
+
+    def test_create_list_url_redirect_anonymous(self):
+        """Страница /create/ перенаправляет анонимного пользователя."""
+        response = self.client.get('/create/')
+        self.assertEqual(response.status_code, 302)
+
+    def test_posts_detail_url_redirect_anonymous(self):
+        """Страница /post_edit/ перенаправляет анонимного
+        пользователя.
+        """
+        response = self.client.get('/post_detail/')
+        self.assertEqual(response.status_code, 404)
