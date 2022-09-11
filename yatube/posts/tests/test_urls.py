@@ -1,6 +1,7 @@
 from http import HTTPStatus
 
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.test import Client, TestCase
 from django.urls import reverse
 
@@ -37,7 +38,8 @@ class UserURLTests(TestCase):
         self.auth_author.force_login(self.author)
         # Авторизуем пользователя
         self.authorized_client = Client()
-        self.authorized_client.force_login(self.user)
+        self.authorized_client.force_login(self.author)
+        cache.clear()
 
     def test_urls_for_everyone(self):
         """Страницы  доступны любому пользователю."""

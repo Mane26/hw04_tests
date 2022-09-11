@@ -1,10 +1,11 @@
 from django import forms
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.core.paginator import Page
 from django.test import Client, TestCase
 from django.urls import reverse
 
-from ..models import Group, Post
+from ..models import Follow, Group, Post
 
 User = get_user_model()
 
@@ -39,7 +40,8 @@ class TestTemplatePages(TestCase):
         self.auth_author = Client()
         self.auth_author.force_login(self.author)
         self.authorized_client = Client()
-        self.authorized_client.force_login(self.user)
+        self.authorized_client.force_login(self.author)
+        cache.clear()
 
     def test_pages_templates(self):
         """URL-адреса используют шаблон posts/index.html."""
@@ -120,12 +122,13 @@ class TestContextPages(TestCase):
         self.auth_author = Client()
         self.auth_author.force_login(self.author)
         self.authorized_client = Client()
-        self.authorized_client.force_login(self.user)
+        self.authorized_client.force_login(self.author)
         self.user_2 = User.objects.create_user(
             username='Второй юзер'
         )
         self.authorized_client_2 = Client()
         self.authorized_client_2.force_login(self.user_2)
+        cache.clear()
 
     def test_index_context(self):
         # Проверка словаря контекста главной страницы (в нём передаётся форма)
@@ -189,9 +192,8 @@ class TestContextPages(TestCase):
                     field_name=field_name,
                     field_type=field_type
             ):
-                form_field = response.context.get(
-                    'form'
-                ).fields.get(field_name)
+                form_field = response.context.get('form').fields.get(
+                    field_name)
                 self.assertEqual(post_id, self.post.text)
                 self.assertIsInstance(form_field, field_type)
 
@@ -260,6 +262,7 @@ class TestPaginatorPages(TestCase):
     def setUp(self):
         self.auth_author = Client()
         self.auth_author.force_login(self.author)
+        cache.clear()
 
     def test_paginator_for_pages(self):
         # Здесь создаются фикстуры: клиент и 13 тестовых записей.
@@ -293,3 +296,50 @@ class TestPaginatorPages(TestCase):
                 self.assertIsInstance(context_for_first, Page)
                 self.assertEqual(len(context_for_first), POST_NUM_ONE_PAGE)
                 self.assertEqual(context_for_second, post_for_second)
+
+
+class FollowViewsTest(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.post_autor = User.objects.create(
+            username='post_autor',
+        )
+        cls.post_follower = User.objects.create(
+            username='post_follower',
+        )
+        cls.post = Post.objects.create(
+            text='Подпишись на меня',
+            author=cls.post_autor,
+        )
+
+    def setUp(self):
+        self.author_client = Client()
+        self.author_client.force_login(self.post_follower)
+        self.follower_client = Client()
+        self.follower_client.force_login(self.post_autor)
+        cache.clear()
+
+    def test_follow_on_user(self):
+        """Проверка подписки на пользователя."""
+        count_follow = Follow.objects.count()
+        self.follower_client.post(
+            reverse(
+                'posts:profile_follow',
+                kwargs={'username': self.post_follower}))
+        follow = Follow.objects.all().latest('id')
+        self.assertEqual(Follow.objects.count(), count_follow + 1)
+        self.assertEqual(follow.author_id, self.post_follower.id)
+        self.assertEqual(follow.user_id, self.post_autor.id)
+
+    def test_unfollow_on_user(self):
+        """Проверка отписки от пользователя."""
+        Follow.objects.create(
+            user=self.post_autor,
+            author=self.post_follower)
+        count_follow = Follow.objects.count()
+        self.follower_client.post(
+            reverse(
+                'posts:profile_unfollow',
+                kwargs={'username': self.post_follower}))
+        self.assertEqual(Follow.objects.count(), count_follow - 1)
